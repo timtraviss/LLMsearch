@@ -1,0 +1,194 @@
+# render.yaml - Render deployment configuration
+services:
+  - type: web
+    name: pdf-search-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PORT
+        value: 8000
+    healthCheckPath: /health
+
+---
+
+# requirements.txt
+streamlit>=1.28.0
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+PyMuPDF>=1.23.0
+openai>=1.3.0
+pinecone-client>=2.2.0
+python-multipart>=0.0.6
+python-dotenv>=1.0.0
+pydantic>=2.4.0
+
+---
+
+# Dockerfile (alternative to render.yaml)
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Expose port
+EXPOSE 8000
+
+# Run the application
+CMD ["python", "main.py"]
+
+---
+
+# .env.example
+OPENAI_API_KEY=your_openai_api_key_here
+PINECONE_API_KEY=your_pinecone_api_key_here
+PORT=8000
+
+---
+
+# n8n_workflows.json - Example n8n workflow configurations
+{
+  "workflows": [
+    {
+      "name": "PDF Auto-Processing",
+      "description": "Automatically process PDFs from email attachments or file uploads",
+      "nodes": [
+        {
+          "name": "Email Trigger",
+          "type": "Gmail Trigger",
+          "config": {
+            "event": "message.received",
+            "filters": {
+              "hasAttachment": true,
+              "attachmentTypes": ["pdf"]
+            }
+          }
+        },
+        {
+          "name": "Extract PDF",
+          "type": "Code",
+          "config": {
+            "jsCode": "// Extract PDF attachment from email"
+          }
+        },
+        {
+          "name": "Upload to PDF Search",
+          "type": "HTTP Request",
+          "config": {
+            "method": "POST",
+            "url": "https://your-render-app.onrender.com/api/upload",
+            "headers": {
+              "Content-Type": "multipart/form-data"
+            }
+          }
+        },
+        {
+          "name": "Send Confirmation",
+          "type": "Gmail",
+          "config": {
+            "operation": "send",
+            "subject": "PDF Processed Successfully"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scheduled Document Analysis",
+      "description": "Daily analysis of uploaded documents with predefined questions",
+      "nodes": [
+        {
+          "name": "Daily Trigger",
+          "type": "Cron",
+          "config": {
+            "expression": "0 9 * * *"
+          }
+        },
+        {
+          "name": "Query Documents",
+          "type": "HTTP Request",
+          "config": {
+            "method": "POST",
+            "url": "https://your-render-app.onrender.com/api/query",
+            "body": {
+              "question": "What are the key findings from yesterday's reports?",
+              "top_k": 5
+            }
+          }
+        },
+        {
+          "name": "Format Results",
+          "type": "Code",
+          "config": {
+            "jsCode": "// Format the analysis results"
+          }
+        },
+        {
+          "name": "Send Report",
+          "type": "Slack",
+          "config": {
+            "operation": "postMessage",
+            "channel": "#daily-reports"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Document Q&A Chatbot",
+      "description": "Webhook-based chatbot for document questions",
+      "nodes": [
+        {
+          "name": "Webhook Trigger",
+          "type": "Webhook",
+          "config": {
+            "httpMethod": "POST",
+            "path": "document-qa"
+          }
+        },
+        {
+          "name": "Validate Question",
+          "type": "Code",
+          "config": {
+            "jsCode": "// Validate and clean the incoming question"
+          }
+        },
+        {
+          "name": "Query PDF Search",
+          "type": "HTTP Request",
+          "config": {
+            "method": "POST",
+            "url": "https://your-render-app.onrender.com/api/query"
+          }
+        },
+        {
+          "name": "Format Response",
+          "type": "Code",
+          "config": {
+            "jsCode": "// Format response for the requesting system"
+          }
+        },
+        {
+          "name": "Return Response",
+          "type": "Respond to Webhook",
+          "config": {
+            "responseMode": "responseNode"
+          }
+        }
+      ]
+    }
+  ]
+}
