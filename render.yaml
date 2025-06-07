@@ -10,5 +10,4 @@ services:
       - key: PINECONE_API_KEY
         sync: false
       - key: PORT
-        value: 8000
-    healthCheckPath: /health
+
