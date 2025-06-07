@@ -10,10 +10,10 @@ import re
 from typing import List, Dict, Tuple
 
 from dotenv import load_dotenv
+load_dotenv()
 import os
 
 # Load environment variables
-load_dotenv()
 
 # if __name__ == "__main__":
 #     import uvicorn
@@ -32,8 +32,9 @@ try:
         st.error("Pinecone API key not found. Please add PINECONE_API_KEY to your .env file.")
         st.stop()
         
-    pc = Pinecone(api_key=pinecone_api_key)
-    index = pc.Index("n8npdffiles")
+
+    pinecone.init(api_key=pinecone_api_key)
+    index = pinecone.Index("n8npdffiles")
     
 except Exception as e:
     st.error(f"Failed to initialize APIs: {str(e)}")
