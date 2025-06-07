@@ -2,23 +2,17 @@ import streamlit as st
 import fitz  # PyMuPDF
 import openai
 # from pinecone import Pinecone
-import pinecone
+from pinecone import Pinecone
 from uuid import uuid4
 from datetime import datetime
 import hashlib
 import re
 from typing import List, Dict, Tuple
-
 from dotenv import load_dotenv
 load_dotenv()
 import os
 
-# Load environment variables
-
-# if __name__ == "__main__":
-#     import uvicorn
-#     port = int(os.getenv("PORT", 8000))
-#     uvicorn.run("main:app", host="0.0.0.0", port=port)
+print("Loaded OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY"))
 
 # Initialize APIs with error handling
 try:
@@ -31,11 +25,9 @@ try:
     if not pinecone_api_key:
         st.error("Pinecone API key not found. Please add PINECONE_API_KEY to your .env file.")
         st.stop()
-        
 
-    pinecone.init(api_key=pinecone_api_key)
-    index = pinecone.Index("n8npdffiles")
-    
+    pc = Pinecone(api_key=pinecone_api_key)
+    index = pc.Index("n8npdffiles")
 except Exception as e:
     st.error(f"Failed to initialize APIs: {str(e)}")
     st.stop()
@@ -173,8 +165,8 @@ def search_documents(question: str, top_k: int = 5) -> Tuple[str, List[Dict]]:
         
         # Query Pinecone
         results = index.query(
-            vector=question_embedding, 
-            top_k=top_k, 
+            vector=question_embedding,
+            top_k=top_k,
             include_metadata=True
         )
         
