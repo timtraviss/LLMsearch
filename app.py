@@ -2,7 +2,7 @@ import streamlit as st
 import fitz  # PyMuPDF
 import openai
 # from pinecone import Pinecone
-import Pinecone
+import pinecone
 from uuid import uuid4
 from datetime import datetime
 import hashlib
