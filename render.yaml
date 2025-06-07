@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: pdf-search-api
-    env: python
+    name: llmsearch
+    runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: streamlit run app.py
     envVars:
       - key: OPENAI_API_KEY
         sync: false
